@@ -18,60 +18,90 @@ function numFmtFor(format) {
 }
 
 // src/sheets/resumen.ts
+function maxValueColumnCount(blocks) {
+  return blocks.reduce((max, b) => Math.max(max, b.valueColumnCount), 0);
+}
+function writeBlock(sheet, block, startRow) {
+  const titleRow = sheet.getRow(startRow);
+  titleRow.getCell(1).value = block.title;
+  titleRow.font = { bold: true, size: 13 };
+  const tableRowsStart = startRow + 1;
+  const tableRows = block.rows.map((row) => {
+    const cells = [row.label];
+    for (let i = 0; i < block.valueColumnCount; i += 1) {
+      cells.push(row.values[i] ?? null);
+    }
+    return cells;
+  });
+  if (tableRows.length === 0) {
+    const headerRow = sheet.getRow(tableRowsStart);
+    block.headers.forEach((label, colIdx) => {
+      headerRow.getCell(colIdx + 1).value = label;
+    });
+    headerRow.font = { bold: true };
+    return tableRowsStart + 1;
+  }
+  sheet.addTable({
+    name: block.tableName,
+    ref: `A${tableRowsStart}`,
+    headerRow: true,
+    columns: block.headers.map((name) => ({ name, filterButton: true })),
+    rows: tableRows
+  });
+  block.rows.forEach((row, rowIdx) => {
+    const numFmt = numFmtFor(row.format);
+    if (!numFmt) return;
+    const dataRow = sheet.getRow(tableRowsStart + 1 + rowIdx);
+    for (let i = 0; i < block.valueColumnCount; i += 1) {
+      dataRow.getCell(i + 2).numFmt = numFmt;
+    }
+  });
+  return tableRowsStart + 1 + tableRows.length;
+}
 function buildResumenSheet(workbook, resumen) {
   const sheet = workbook.addWorksheet("Resumen");
   sheet.views = [{ state: "frozen", ySplit: 1 }];
   const blocks = [
     {
       title: "Antecedentes Financieros",
+      tableName: "TableAntecedentesFinancieros",
       headers: ["Concepto", "Titular", "Codeudor", "Conjunto"],
       rows: resumen.financierosRows,
-      expectedValueCount: 3
+      valueColumnCount: 3
     },
     {
       title: "Estado Situaci\xF3n",
+      tableName: "TableEstadoSituacion",
       headers: ["Concepto", "Titular", "Codeudor", "Total"],
       rows: resumen.situacionRows,
-      expectedValueCount: 3
+      valueColumnCount: 3
     },
     {
       title: "Indicadores",
+      tableName: "TableIndicadores",
       headers: ["Concepto", "Individual", "Conjunto"],
       rows: resumen.indicadoresRows,
-      expectedValueCount: 2
+      valueColumnCount: 2
     }
   ];
+  if (resumen.edadPlazo && resumen.edadPlazo.rows.length > 0) {
+    blocks.push({
+      title: "Edad + Plazo",
+      tableName: "TableEdadPlazo",
+      headers: ["Concepto", ...resumen.edadPlazo.headers],
+      rows: resumen.edadPlazo.rows,
+      valueColumnCount: resumen.edadPlazo.headers.length
+    });
+  }
+  const widestValueCols = maxValueColumnCount(blocks);
   sheet.columns = [
     { width: 40 },
-    { width: 15 },
-    { width: 15 },
-    { width: 15 }
+    ...Array.from({ length: widestValueCols }, () => ({ width: 15 }))
   ];
   let cursor = 1;
   blocks.forEach((block, idx) => {
-    if (idx > 0) {
-      cursor += 1;
-    }
-    const headerRow = sheet.getRow(cursor);
-    block.headers.forEach((label, colIdx) => {
-      headerRow.getCell(colIdx + 1).value = label;
-    });
-    headerRow.font = { bold: true };
-    cursor += 1;
-    block.rows.forEach((row) => {
-      const dataRow = sheet.getRow(cursor);
-      dataRow.getCell(1).value = row.label;
-      const numFmt = numFmtFor(row.format);
-      for (let i = 0; i < block.expectedValueCount; i += 1) {
-        const cell = dataRow.getCell(i + 2);
-        const value = row.values[i] ?? null;
-        cell.value = value;
-        if (numFmt) {
-          cell.numFmt = numFmt;
-        }
-      }
-      cursor += 1;
-    });
+    if (idx > 0) cursor += 1;
+    cursor = writeBlock(sheet, block, cursor);
   });
   return sheet;
 }

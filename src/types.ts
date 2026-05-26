@@ -38,6 +38,14 @@ export interface ExcelResumenRow {
   format: ExcelFormat
 }
 
+/** Optional 4th Resumen block — `Edad+Plazo` table from the PDF. Column count
+ *  varies (codeudor column dropped when absent), so headers are passed in. */
+export interface ExcelResumenEdadPlazo {
+  /** Column headers after the leading "Concepto" column. */
+  headers: string[]
+  rows: ExcelResumenRow[]
+}
+
 export interface ExcelInput {
   meta: {
     requestLabel: string
@@ -51,6 +59,7 @@ export interface ExcelInput {
     financierosRows: ExcelResumenRow[]
     situacionRows: ExcelResumenRow[]
     indicadoresRows: ExcelResumenRow[]
+    edadPlazo?: ExcelResumenEdadPlazo
   }
 }
 

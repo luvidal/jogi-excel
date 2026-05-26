@@ -32,6 +32,13 @@ interface ExcelResumenRow {
     values: Array<number | null>;
     format: ExcelFormat;
 }
+/** Optional 4th Resumen block — `Edad+Plazo` table from the PDF. Column count
+ *  varies (codeudor column dropped when absent), so headers are passed in. */
+interface ExcelResumenEdadPlazo {
+    /** Column headers after the leading "Concepto" column. */
+    headers: string[];
+    rows: ExcelResumenRow[];
+}
 interface ExcelInput {
     meta: {
         requestLabel: string;
@@ -48,10 +55,11 @@ interface ExcelInput {
         financierosRows: ExcelResumenRow[];
         situacionRows: ExcelResumenRow[];
         indicadoresRows: ExcelResumenRow[];
+        edadPlazo?: ExcelResumenEdadPlazo;
     };
 }
 type SituacionTipo = 'deudas' | 'propiedades' | 'vehiculos' | 'inversiones';
 
 declare function buildExcel(input: ExcelInput): Promise<ArrayBuffer>;
 
-export { type ExcelApplicant, type ExcelColumn, type ExcelFormat, type ExcelInput, type ExcelPerfilEntry, type ExcelResumenRow, type ExcelSituacionTable, type SituacionTipo, buildExcel };
+export { type ExcelApplicant, type ExcelColumn, type ExcelFormat, type ExcelInput, type ExcelPerfilEntry, type ExcelResumenEdadPlazo, type ExcelResumenRow, type ExcelSituacionTable, type SituacionTipo, buildExcel };

@@ -6,6 +6,7 @@ export type {
   ExcelApplicant,
   ExcelPerfilEntry,
   ExcelResumenRow,
+  ExcelResumenEdadPlazo,
   ExcelSituacionTable,
   SituacionTipo,
 } from './types'
